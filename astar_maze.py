@@ -1,59 +1,92 @@
-from pyamaze import maze,agent,textLabel
-from queue import PriorityQueue
-def h(cell1, cell2):
-  x1, y1 = cell1
-  x2, y2 = cell2
-  return abs(x1 - x2) + abs(y1 - y2)
-def aStar(m):
-  start =(m.rows, m.cols)
-  g_score = {cell: float('inf') for cell in m.grid}
-  g_score[start] = 0
-  f_score = {cell: float('inf') for cell in m.grid}
-  f_score[start] = h(start, (1, 1))
-
-  open = PriorityQueue()
-  open.put((h(start, (1, 1)), h(start, (1, 1)), start))
-  aPath ={}
+from pyamaze import maze, agent, textLabel
+import heapq
 
 
-  while not open.empty():
-    currCell = open.get()[2]
-    if currCell == (1, 1):
-      break
-    for d in 'ESNW':
-      if m.maze_map[currCell][d]==True:
-        if d=='E':
-          childCell=(currCell[0],currCell[1]+1)
-        elif d=='W':
-          childCell=(currCell[0],currCell[1]-1)
-        elif d=='N':
-          childCell=(currCell[0]-1,currCell[1])
-        elif d=='S':
-          childCell=(currCell[0]+1,currCell[1])
+# Heuristic function
 
-        temp_g_score = g_score[currCell] + 1
-        temp_f_score = temp_g_score + h(childCell, (1, 1))
-
-        if temp_f_score < f_score[childCell]:
-          g_score[childCell] = temp_g_score
-          f_score[childCell] = temp_f_score
-          open.put((temp_f_score, h(childCell, (1, 1)), childCell))
-          aPath[childCell] = currCell
-  fwdPath = {}
-  cell = (1, 1)
-  while cell != start:
-    fwdPath[aPath[cell]] = cell
-    cell = aPath[cell]
-  return fwdPath
+def manhattan(a, b):
+    """Manhattan distance heuristic"""
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
-m = maze(10, 10)
-m.CreateMaze()
-path = aStar(m)
 
-a = agent(m,footprints=True)
-m.tracePath({a: path})
-l=textLabel(m,'A Star Path Length',len(path)+1)
+# A* Search Algorithm for pyamaze
+
+def astar(m, start=None):
+    if start is None:
+        start = (m.rows, m.cols)
+
+    goal = (1, 1)
+
+    open_set = []
+    heapq.heappush(open_set, (0, 0, start))
+
+    came_from = {}
+    g_score = {start: 0}
+
+    visited = set()
+
+    while open_set:
+        _, current_g, current = heapq.heappop(open_set)
+
+        if current in visited:
+            continue
+        visited.add(current)
+
+        if current == goal:
+            return reconstruct_path(came_from, current)
+
+        for direction in 'ESNW':  # East, South, North, West
+            if m.maze_map[current][direction] == True:
+                if direction == 'E':
+                    neighbor = (current[0], current[1] + 1)
+                elif direction == 'W':
+                    neighbor = (current[0], current[1] - 1)
+                elif direction == 'N':
+                    neighbor = (current[0] - 1, current[1])
+                elif direction == 'S':
+                    neighbor = (current[0] + 1, current[1])
+
+                tentative_g = current_g + 1
+
+                if neighbor not in g_score or tentative_g < g_score[neighbor]:
+                    g_score[neighbor] = tentative_g
+                    f_score = tentative_g + manhattan(neighbor, goal)
+                    heapq.heappush(open_set, (f_score, tentative_g, neighbor))
+                    came_from[neighbor] = current
+
+    return None
+
+# Path reconstruction
+
+def reconstruct_path(came_from, current):
+    path = {}
+    while current in came_from:
+        path[came_from[current]] = current
+        current = came_from[current]
+    return path
 
 
-m.run()
+
+# Run Example
+
+if __name__ == "__main__":
+
+    m = maze(10, 10)
+    m.CreateMaze()
+
+    path = astar(m)
+
+    if path:
+
+        a = agent(m, footprints=True)
+
+        m.tracePath({a: path})
+
+        # Show path length
+        l = textLabel(m, 'A-Star Path Length', len(path))
+
+        m.run()
+
+    else:
+        print("No path found.")
