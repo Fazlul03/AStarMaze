@@ -79,6 +79,7 @@ if __name__ == "__main__":
 
     if path:
 
+        print("Path found!")
         a = agent(m, footprints=True)
 
         m.tracePath({a: path})
@@ -90,3 +91,4 @@ if __name__ == "__main__":
 
     else:
         print("No path found.")
+
